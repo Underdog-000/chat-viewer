@@ -1,3 +1,10 @@
+export async function GET() {
+  return Response.json({
+    ok: true,
+    message: "Import endpoint is working",
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();

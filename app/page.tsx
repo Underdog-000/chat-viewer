@@ -22,6 +22,9 @@ export type DialogRow = {
   dialog_text: string | null;
   created_at: string;
   dialog_hash: string | null;
+  offer: string | null;
+  country: string | null;
+  vertical: string | null;
 };
 
 export default async function HomePage() {

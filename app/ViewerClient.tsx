@@ -123,7 +123,11 @@ function TabButton({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick();
+      }}
       style={{
         height: 36,
         padding: "0 12px",
@@ -204,6 +208,9 @@ function DialogCard({ item }: { item: DialogRow }) {
     `Intent: ${item.intent || "—"}`,
     `Problem: ${item.problem || "—"}`,
     `Quality: ${item.quality ?? "—"}`,
+    `Country: ${item.country || "—"}`,
+    `Vertical: ${item.vertical || "—"}`,
+    `Offer: ${item.offer || "—"}`,
     `Оценка: ${item.analysis_text || "Нет текста анализа"}`,
   ].join("\n");
 
@@ -237,51 +244,6 @@ function DialogCard({ item }: { item: DialogRow }) {
               {item.is_lead ? "Лид" : "Без лида"}
             </span>
 
-            {item.country && (
-  <span
-    style={{
-      borderRadius: 999,
-      padding: "4px 10px",
-      fontSize: 12,
-      fontWeight: 700,
-      background: "#eff6ff",
-      color: "#1d4ed8",
-    }}
-  >
-    {item.country}
-  </span>
-)}
-
-{item.vertical && (
-  <span
-    style={{
-      borderRadius: 999,
-      padding: "4px 10px",
-      fontSize: 12,
-      fontWeight: 700,
-      background: "#f5f3ff",
-      color: "#6d28d9",
-    }}
-  >
-    {item.vertical}
-  </span>
-)}
-
-{item.offer && (
-  <span
-    style={{
-      borderRadius: 999,
-      padding: "4px 10px",
-      fontSize: 12,
-      fontWeight: 700,
-      background: "#fff7ed",
-      color: "#c2410c",
-    }}
-  >
-    {item.offer}
-  </span>
-)}
-            
             <span
               style={{
                 borderRadius: 999,
@@ -294,6 +256,51 @@ function DialogCard({ item }: { item: DialogRow }) {
             >
               {item.intent || "—"}
             </span>
+
+            {item.country && (
+              <span
+                style={{
+                  borderRadius: 999,
+                  padding: "4px 10px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  background: "#eff6ff",
+                  color: "#1d4ed8",
+                }}
+              >
+                {item.country}
+              </span>
+            )}
+
+            {item.vertical && (
+              <span
+                style={{
+                  borderRadius: 999,
+                  padding: "4px 10px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  background: "#f5f3ff",
+                  color: "#6d28d9",
+                }}
+              >
+                {item.vertical}
+              </span>
+            )}
+
+            {item.offer && (
+              <span
+                style={{
+                  borderRadius: 999,
+                  padding: "4px 10px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  background: "#fff7ed",
+                  color: "#c2410c",
+                }}
+              >
+                {item.offer}
+              </span>
+            )}
 
             <span
               style={{
@@ -357,10 +364,6 @@ function DialogCard({ item }: { item: DialogRow }) {
           </div>
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <ActionButton onClick={() => copyText(item.session_id)}>
-              Скопировать session_id
-            </ActionButton>
-
             <ActionButton onClick={() => copyText(dialogPlainText)}>
               Скопировать диалог
             </ActionButton>
@@ -427,6 +430,15 @@ function DialogCard({ item }: { item: DialogRow }) {
                 <strong>Problem:</strong> {item.problem || "—"}
               </div>
               <div style={{ fontSize: 14 }}>
+                <strong>Country:</strong> {item.country || "—"}
+              </div>
+              <div style={{ fontSize: 14 }}>
+                <strong>Vertical:</strong> {item.vertical || "—"}
+              </div>
+              <div style={{ fontSize: 14 }}>
+                <strong>Offer:</strong> {item.offer || "—"}
+              </div>
+              <div style={{ fontSize: 14 }}>
                 <strong>Quality:</strong>{" "}
                 <span style={{ color: qualityColor, fontWeight: 700 }}>
                   {item.quality ?? "—"}
@@ -455,12 +467,12 @@ function DialogCard({ item }: { item: DialogRow }) {
             <div style={{ display: "grid", gap: 8, fontSize: 13, color: "#374151" }}>
               <div><strong>Session ID:</strong> {item.session_id}</div>
               <div><strong>Создан:</strong> {formatDate(item.created_at)}</div>
+              <div><strong>Country:</strong> {item.country || "—"}</div>
+              <div><strong>Vertical:</strong> {item.vertical || "—"}</div>
+              <div><strong>Offer:</strong> {item.offer || "—"}</div>
               <div><strong>Всего сообщений:</strong> {item.messages_count ?? 0}</div>
               <div><strong>Сообщений клиента:</strong> {item.user_messages_count ?? 0}</div>
               <div><strong>Dialog hash:</strong> {item.dialog_hash || "—"}</div>
-              <div><strong>Country:</strong> {item.country || "—"}</div>
-<div><strong>Vertical:</strong> {item.vertical || "—"}</div>
-<div><strong>Offer:</strong> {item.offer || "—"}</div>
             </div>
           </div>
         )}
@@ -473,11 +485,35 @@ export default function ViewerClient({ initialRows }: { initialRows: DialogRow[]
   const [search, setSearch] = useState("");
   const [leadFilter, setLeadFilter] = useState("all");
   const [intentFilter, setIntentFilter] = useState("all");
+  const [countryFilter, setCountryFilter] = useState("all");
+  const [verticalFilter, setVerticalFilter] = useState("all");
+  const [offerFilter, setOfferFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
 
   const intents = useMemo(() => {
     const uniq = Array.from(
       new Set(initialRows.map((row) => row.intent).filter(Boolean)),
+    ) as string[];
+    return uniq.sort((a, b) => a.localeCompare(b, "ru"));
+  }, [initialRows]);
+
+  const countries = useMemo(() => {
+    const uniq = Array.from(
+      new Set(initialRows.map((row) => row.country).filter(Boolean)),
+    ) as string[];
+    return uniq.sort((a, b) => a.localeCompare(b, "ru"));
+  }, [initialRows]);
+
+  const verticals = useMemo(() => {
+    const uniq = Array.from(
+      new Set(initialRows.map((row) => row.vertical).filter(Boolean)),
+    ) as string[];
+    return uniq.sort((a, b) => a.localeCompare(b, "ru"));
+  }, [initialRows]);
+
+  const offers = useMemo(() => {
+    const uniq = Array.from(
+      new Set(initialRows.map((row) => row.offer).filter(Boolean)),
     ) as string[];
     return uniq.sort((a, b) => a.localeCompare(b, "ru"));
   }, [initialRows]);
@@ -492,6 +528,18 @@ export default function ViewerClient({ initialRows }: { initialRows: DialogRow[]
       rows = rows.filter((row) => (row.intent || "") === intentFilter);
     }
 
+    if (countryFilter !== "all") {
+      rows = rows.filter((row) => (row.country || "") === countryFilter);
+    }
+
+    if (verticalFilter !== "all") {
+      rows = rows.filter((row) => (row.vertical || "") === verticalFilter);
+    }
+
+    if (offerFilter !== "all") {
+      rows = rows.filter((row) => (row.offer || "") === offerFilter);
+    }
+
     const q = search.trim().toLowerCase();
     if (q) {
       rows = rows.filter((row) => {
@@ -503,6 +551,9 @@ export default function ViewerClient({ initialRows }: { initialRows: DialogRow[]
           (row.problem || "").toLowerCase().includes(q) ||
           (row.analysis_text || "").toLowerCase().includes(q) ||
           (row.dialog_text || "").toLowerCase().includes(q) ||
+          (row.country || "").toLowerCase().includes(q) ||
+          (row.vertical || "").toLowerCase().includes(q) ||
+          (row.offer || "").toLowerCase().includes(q) ||
           messagesText.toLowerCase().includes(q)
         );
       });
@@ -531,7 +582,16 @@ export default function ViewerClient({ initialRows }: { initialRows: DialogRow[]
     });
 
     return rows;
-  }, [initialRows, search, leadFilter, intentFilter, sortBy]);
+  }, [
+    initialRows,
+    search,
+    leadFilter,
+    intentFilter,
+    countryFilter,
+    verticalFilter,
+    offerFilter,
+    sortBy,
+  ]);
 
   const leads = filteredRows.filter((row) => row.is_lead);
   const noLeads = filteredRows.filter((row) => !row.is_lead);
@@ -590,14 +650,14 @@ export default function ViewerClient({ initialRows }: { initialRows: DialogRow[]
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "2fr 1fr 1fr 1fr",
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
               gap: 12,
             }}
           >
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Поиск по session_id, intent, problem, тексту диалога..."
+              placeholder="Поиск по intent, problem, GEO, vertical, offer, тексту..."
               style={{
                 width: "100%",
                 height: 42,
@@ -641,6 +701,66 @@ export default function ViewerClient({ initialRows }: { initialRows: DialogRow[]
               {intents.map((intent) => (
                 <option key={intent} value={intent}>
                   {intent}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={countryFilter}
+              onChange={(e) => setCountryFilter(e.target.value)}
+              style={{
+                height: 42,
+                borderRadius: 12,
+                border: "1px solid #d1d5db",
+                padding: "0 12px",
+                fontSize: 14,
+                background: "#fff",
+              }}
+            >
+              <option value="all">Все GEO</option>
+              {countries.map((country) => (
+                <option key={country} value={country}>
+                  {country}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={verticalFilter}
+              onChange={(e) => setVerticalFilter(e.target.value)}
+              style={{
+                height: 42,
+                borderRadius: 12,
+                border: "1px solid #d1d5db",
+                padding: "0 12px",
+                fontSize: 14,
+                background: "#fff",
+              }}
+            >
+              <option value="all">Все vertical</option>
+              {verticals.map((vertical) => (
+                <option key={vertical} value={vertical}>
+                  {vertical}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={offerFilter}
+              onChange={(e) => setOfferFilter(e.target.value)}
+              style={{
+                height: 42,
+                borderRadius: 12,
+                border: "1px solid #d1d5db",
+                padding: "0 12px",
+                fontSize: 14,
+                background: "#fff",
+              }}
+            >
+              <option value="all">Все offer</option>
+              {offers.map((offer) => (
+                <option key={offer} value={offer}>
+                  {offer}
                 </option>
               ))}
             </select>

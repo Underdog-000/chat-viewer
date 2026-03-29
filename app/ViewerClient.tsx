@@ -8,6 +8,8 @@ type Message = {
   text: string;
 };
 
+type TabKey = "dialog" | "analysis" | "meta";
+
 function safeParseMessages(value: DialogRow["messages"]): Message[] {
   if (!value) return [];
 
@@ -77,9 +79,133 @@ function StatCard({ label, value }: { label: string; value: number }) {
   );
 }
 
+function ActionButton({
+  children,
+  onClick,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick();
+      }}
+      style={{
+        height: 34,
+        padding: "0 12px",
+        borderRadius: 10,
+        border: "1px solid #d1d5db",
+        background: "#fff",
+        cursor: "pointer",
+        fontSize: 13,
+        fontWeight: 600,
+        color: "#111827",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function TabButton({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        height: 36,
+        padding: "0 12px",
+        borderRadius: 10,
+        border: active ? "1px solid #c7d2fe" : "1px solid #e5e7eb",
+        background: active ? "#eef2ff" : "#fff",
+        color: active ? "#3730a3" : "#374151",
+        fontSize: 13,
+        fontWeight: 700,
+        cursor: "pointer",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function openTranslate(text: string, targetLang = "ru") {
+  const url = `https://translate.google.com/?sl=auto&tl=${targetLang}&text=${encodeURIComponent(text)}&op=translate`;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+async function copyText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {}
+}
+
+function MessageBubble({ message }: { message: Message }) {
+  const isUser = message.role === "user";
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: isUser ? "flex-start" : "flex-end",
+      }}
+    >
+      <div
+        style={{
+          maxWidth: "85%",
+          background: isUser ? "#eef2ff" : "#ecfdf5",
+          border: `1px solid ${isUser ? "#c7d2fe" : "#bbf7d0"}`,
+          borderRadius: 16,
+          padding: "10px 12px",
+          lineHeight: 1.45,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 800,
+            marginBottom: 6,
+            color: isUser ? "#4338ca" : "#15803d",
+          }}
+        >
+          {isUser ? "Клиент" : "Бот"}
+        </div>
+        <div style={{ fontSize: 14, whiteSpace: "pre-wrap" }}>{message.text}</div>
+      </div>
+    </div>
+  );
+}
+
 function DialogCard({ item }: { item: DialogRow }) {
   const parsedMessages = safeParseMessages(item.messages);
   const qualityColor = getQualityColor(item.quality);
+  const [activeTab, setActiveTab] = useState<TabKey>("dialog");
+
+  const dialogPlainText =
+    parsedMessages.length > 0
+      ? parsedMessages
+          .map((m) => `${m.role === "user" ? "Клиент" : "Бот"}: ${m.text}`)
+          .join("\n\n")
+      : item.dialog_text || "";
+
+  const analysisPlainText = [
+    `Intent: ${item.intent || "—"}`,
+    `Problem: ${item.problem || "—"}`,
+    `Quality: ${item.quality ?? "—"}`,
+    `Оценка: ${item.analysis_text || "Нет текста анализа"}`,
+  ].join("\n");
 
   return (
     <details
@@ -155,98 +281,141 @@ function DialogCard({ item }: { item: DialogRow }) {
           borderTop: "1px solid #f0f0f0",
           padding: 16,
           display: "grid",
-          gap: 18,
+          gap: 16,
           background: "#fcfcfd",
         }}
       >
         <div
           style={{
-            background: "#fff",
-            border: "1px solid #eef2f7",
-            borderRadius: 16,
-            padding: 16,
+            display: "flex",
+            gap: 10,
+            flexWrap: "wrap",
+            justifyContent: "space-between",
           }}
         >
-          <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 12, color: "#111827" }}>
-            Анализ
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <TabButton
+              label="Диалог"
+              active={activeTab === "dialog"}
+              onClick={() => setActiveTab("dialog")}
+            />
+            <TabButton
+              label="Анализ"
+              active={activeTab === "analysis"}
+              onClick={() => setActiveTab("analysis")}
+            />
+            <TabButton
+              label="Метаданные"
+              active={activeTab === "meta"}
+              onClick={() => setActiveTab("meta")}
+            />
           </div>
 
-          <div style={{ display: "grid", gap: 10 }}>
-            <div style={{ fontSize: 14 }}>
-              <strong>Intent:</strong> {item.intent || "—"}
-            </div>
-            <div style={{ fontSize: 14 }}>
-              <strong>Problem:</strong> {item.problem || "—"}
-            </div>
-            <div style={{ fontSize: 14 }}>
-              <strong>Quality:</strong>{" "}
-              <span style={{ color: qualityColor, fontWeight: 700 }}>
-                {item.quality ?? "—"}
-              </span>
-            </div>
-            <div style={{ fontSize: 14, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
-              <strong>Оценка:</strong> {item.analysis_text || "Нет текста анализа"}
-            </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <ActionButton onClick={() => copyText(item.session_id)}>
+              Скопировать session_id
+            </ActionButton>
+
+            <ActionButton onClick={() => copyText(dialogPlainText)}>
+              Скопировать диалог
+            </ActionButton>
+
+            <ActionButton onClick={() => copyText(analysisPlainText)}>
+              Скопировать анализ
+            </ActionButton>
+
+            <ActionButton onClick={() => openTranslate(dialogPlainText)}>
+              Перевести диалог
+            </ActionButton>
+
+            <ActionButton onClick={() => openTranslate(analysisPlainText)}>
+              Перевести анализ
+            </ActionButton>
           </div>
         </div>
 
-        <div
-          style={{
-            background: "#fff",
-            border: "1px solid #eef2f7",
-            borderRadius: 16,
-            padding: 16,
-          }}
-        >
-          <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 12, color: "#111827" }}>
-            Диалог
+        {activeTab === "dialog" && (
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid #eef2f7",
+              borderRadius: 16,
+              padding: 16,
+            }}
+          >
+            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 12, color: "#111827" }}>
+              Диалог
+            </div>
+
+            <div style={{ display: "grid", gap: 10 }}>
+              {parsedMessages.length > 0 ? (
+                parsedMessages.map((message, index) => (
+                  <MessageBubble key={index} message={message} />
+                ))
+              ) : (
+                <div style={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.5 }}>
+                  {item.dialog_text || "Нет текста диалога"}
+                </div>
+              )}
+            </div>
           </div>
+        )}
 
-          <div style={{ display: "grid", gap: 10 }}>
-            {parsedMessages.length > 0 ? (
-              parsedMessages.map((message, index) => {
-                const isUser = message.role === "user";
+        {activeTab === "analysis" && (
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid #eef2f7",
+              borderRadius: 16,
+              padding: 16,
+            }}
+          >
+            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 12, color: "#111827" }}>
+              Анализ
+            </div>
 
-                return (
-                  <div
-                    key={index}
-                    style={{
-                      display: "flex",
-                      justifyContent: isUser ? "flex-start" : "flex-end",
-                    }}
-                  >
-                    <div
-                      style={{
-                        maxWidth: "80%",
-                        background: isUser ? "#eef2ff" : "#ecfdf5",
-                        border: `1px solid ${isUser ? "#c7d2fe" : "#bbf7d0"}`,
-                        borderRadius: 16,
-                        padding: "10px 12px",
-                        lineHeight: 1.45,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 800,
-                          marginBottom: 6,
-                          color: isUser ? "#4338ca" : "#15803d",
-                        }}
-                      >
-                        {isUser ? "Клиент" : "Бот"}
-                      </div>
-                      <div style={{ fontSize: 14, whiteSpace: "pre-wrap" }}>{message.text}</div>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div style={{ whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.5 }}>
-                {item.dialog_text || "Нет текста диалога"}
+            <div style={{ display: "grid", gap: 10 }}>
+              <div style={{ fontSize: 14 }}>
+                <strong>Intent:</strong> {item.intent || "—"}
               </div>
-            )}
+              <div style={{ fontSize: 14 }}>
+                <strong>Problem:</strong> {item.problem || "—"}
+              </div>
+              <div style={{ fontSize: 14 }}>
+                <strong>Quality:</strong>{" "}
+                <span style={{ color: qualityColor, fontWeight: 700 }}>
+                  {item.quality ?? "—"}
+                </span>
+              </div>
+              <div style={{ fontSize: 14, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+                <strong>Оценка:</strong> {item.analysis_text || "Нет текста анализа"}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+
+        {activeTab === "meta" && (
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid #eef2f7",
+              borderRadius: 16,
+              padding: 16,
+            }}
+          >
+            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 12, color: "#111827" }}>
+              Метаданные
+            </div>
+
+            <div style={{ display: "grid", gap: 8, fontSize: 13, color: "#374151" }}>
+              <div><strong>Session ID:</strong> {item.session_id}</div>
+              <div><strong>Создан:</strong> {formatDate(item.created_at)}</div>
+              <div><strong>Всего сообщений:</strong> {item.messages_count ?? 0}</div>
+              <div><strong>Сообщений клиента:</strong> {item.user_messages_count ?? 0}</div>
+              <div><strong>Dialog hash:</strong> {item.dialog_hash || "—"}</div>
+            </div>
+          </div>
+        )}
       </div>
     </details>
   );

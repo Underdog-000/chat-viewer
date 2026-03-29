@@ -237,6 +237,51 @@ function DialogCard({ item }: { item: DialogRow }) {
               {item.is_lead ? "Лид" : "Без лида"}
             </span>
 
+            {item.country && (
+  <span
+    style={{
+      borderRadius: 999,
+      padding: "4px 10px",
+      fontSize: 12,
+      fontWeight: 700,
+      background: "#eff6ff",
+      color: "#1d4ed8",
+    }}
+  >
+    {item.country}
+  </span>
+)}
+
+{item.vertical && (
+  <span
+    style={{
+      borderRadius: 999,
+      padding: "4px 10px",
+      fontSize: 12,
+      fontWeight: 700,
+      background: "#f5f3ff",
+      color: "#6d28d9",
+    }}
+  >
+    {item.vertical}
+  </span>
+)}
+
+{item.offer && (
+  <span
+    style={{
+      borderRadius: 999,
+      padding: "4px 10px",
+      fontSize: 12,
+      fontWeight: 700,
+      background: "#fff7ed",
+      color: "#c2410c",
+    }}
+  >
+    {item.offer}
+  </span>
+)}
+            
             <span
               style={{
                 borderRadius: 999,
@@ -413,6 +458,9 @@ function DialogCard({ item }: { item: DialogRow }) {
               <div><strong>Всего сообщений:</strong> {item.messages_count ?? 0}</div>
               <div><strong>Сообщений клиента:</strong> {item.user_messages_count ?? 0}</div>
               <div><strong>Dialog hash:</strong> {item.dialog_hash || "—"}</div>
+              <div><strong>Country:</strong> {item.country || "—"}</div>
+<div><strong>Vertical:</strong> {item.vertical || "—"}</div>
+<div><strong>Offer:</strong> {item.offer || "—"}</div>
             </div>
           </div>
         )}

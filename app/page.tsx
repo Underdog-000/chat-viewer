@@ -31,7 +31,7 @@ export default async function HomePage() {
   const { data, error } = await supabase
     .from("dialogs")
     .select(
-      "id, session_id, is_lead, intent, problem, quality, messages_count, user_messages_count, analysis_text, messages, dialog_text, created_at, dialog_hash",
+      "id, session_id, is_lead, intent, problem, quality, messages_count, user_messages_count, analysis_text, messages, dialog_text, created_at, dialog_hash, offer, country, vertical",
     )
     .order("created_at", { ascending: false })
     .limit(300);
